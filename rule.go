@@ -3,6 +3,7 @@ package ptproc
 import (
 	"context"
 	"io"
+	"path/filepath"
 )
 
 type Rule interface {
@@ -10,5 +11,12 @@ type Rule interface {
 }
 
 type RuleOptions struct {
-	OpenFile func(filePath string) (io.Reader, error)
+	Processor  Processor
+	OpenFile   func(filePath string) (io.Reader, error)
+	TargetPath string
+}
+
+func (opts *RuleOptions) FilePath(externalFilePath string) string {
+	dirPath := filepath.Dir(opts.TargetPath)
+	return filepath.Join(dirPath, externalFilePath)
 }

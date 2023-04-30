@@ -11,18 +11,18 @@ import (
 	"golang.org/x/exp/slog"
 )
 
-var _ Rule = (*mapfileRule)(nil)
+var _ Rule = (*maprangeRule)(nil)
 
-var DefaultMapfileStartRegEx = regexp.MustCompile(`mapfile:(?P<FilePath>[^\s]+)`)
-var DefaultMapfileEndRegEx = regexp.MustCompile(`mapfile.end`)
+var DefaultMaprangeStartRegEx = regexp.MustCompile(`maprange:(?P<FilePath>[^\s,]+),(?P<RangeName>[^\s]+)`)
+var DefaultMaprangeEndRegEx = regexp.MustCompile(`maprange.end`)
 
-type mapfileRule struct {
+type maprangeRule struct {
 	startRegExp *regexp.Regexp
 	endRegExp   *regexp.Regexp
 }
 
-func (rule *mapfileRule) Apply(ctx context.Context, opts *RuleOptions, ns []Node) (_ []Node, err error) {
-	ctx, span := otel.Tracer("ptproc").Start(ctx, "mapfileRule.Apply")
+func (rule *maprangeRule) Apply(ctx context.Context, opts *RuleOptions, ns []Node) (_ []Node, err error) {
+	ctx, span := otel.Tracer("ptproc").Start(ctx, "maprangeRule.Apply")
 	defer func() {
 		if err != nil {
 			span.RecordError(err)
@@ -32,32 +32,34 @@ func (rule *mapfileRule) Apply(ctx context.Context, opts *RuleOptions, ns []Node
 
 	startRegExp := rule.startRegExp
 	if startRegExp == nil {
-		startRegExp = DefaultMapfileStartRegEx
+		startRegExp = DefaultMaprangeStartRegEx
 	}
 	endRegExp := rule.endRegExp
 	if endRegExp == nil {
-		endRegExp = DefaultMapfileEndRegEx
+		endRegExp = DefaultMaprangeEndRegEx
 	}
 
-	slog.DebugCtx(ctx, "start mapfile rule processing")
+	slog.DebugCtx(ctx, "start maprange rule processing")
 
 	newNodes := make([]Node, 0, len(ns))
 
-	var inMapfileRange bool
+	var inMaprangeRange bool
 	for _, n := range ns {
 		txt := n.Text()
 
-		if !inMapfileRange {
+		if !inMaprangeRange {
 			group := startRegExp.FindStringSubmatch(txt)
-			if len(group) == 2 {
+			if len(group) == 3 {
 				filePath := group[1]
 				realFilePath := opts.FilePath(filePath)
-				slog.DebugCtx(ctx, "find mapfile directive",
+				rangeName := group[2]
+				slog.DebugCtx(ctx, "find maprange directive",
 					slog.String("filePath", filePath),
 					slog.String("realFilePath", realFilePath),
+					slog.String("rangeName", rangeName),
 				)
 
-				inMapfileRange = true
+				inMaprangeRange = true
 				newNodes = append(newNodes, n)
 
 				r, err := opts.OpenFile(realFilePath)
@@ -69,6 +71,21 @@ func (rule *mapfileRule) Apply(ctx context.Context, opts *RuleOptions, ns []Node
 					return nil, err
 				}
 				s := string(b)
+
+				subProc, err := opts.Processor.WithRules(ctx, []Rule{
+					&rangeImportRule{
+						targetName: rangeName,
+					},
+				})
+				if err != nil {
+					return nil, err
+				}
+
+				s, err = subProc.ProcessFile(ctx, realFilePath)
+				if err != nil {
+					return nil, err
+				}
+
 				if !strings.HasSuffix(s, "\n") {
 					s += "\n"
 				}
@@ -80,15 +97,15 @@ func (rule *mapfileRule) Apply(ctx context.Context, opts *RuleOptions, ns []Node
 				newNodes = append(newNodes, n)
 			}
 		} else if endRegExp.MatchString(txt) {
-			inMapfileRange = false
+			inMaprangeRange = false
 			newNodes = append(newNodes, n)
 		} else {
 			continue
 		}
 	}
 
-	if inMapfileRange {
-		return nil, errors.New("mapfile end directive is not found")
+	if inMaprangeRange {
+		return nil, errors.New("maprange end directive is not found")
 	}
 
 	return newNodes, nil

@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/MakeNowJust/heredoc/v2 v2.0.1
-	github.com/sergi/go-diff v1.3.1
+	github.com/pmezard/go-difflib v1.0.0
 	go.opentelemetry.io/otel v1.15.0
 	golang.org/x/exp v0.0.0-20230425010034-47ecfdc1ba53
 )

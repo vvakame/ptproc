@@ -7,7 +7,6 @@ import (
 	"errors"
 	"io"
 	"os"
-	"path/filepath"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -15,7 +14,9 @@ import (
 )
 
 type Processor interface {
+	Parse(ctx context.Context, filePath string, r io.Reader) ([]Node, error)
 	ProcessFile(ctx context.Context, filePath string) (string, error)
+	WithRules(ctx context.Context, rules []Rule) (Processor, error)
 }
 
 type ProcessorConfig struct {
@@ -41,6 +42,7 @@ func NewProcessor(cfg *ProcessorConfig) (Processor, error) {
 	if len(proc.rules) == 0 {
 		proc.rules = []Rule{
 			&mapfileRule{},
+			&maprangeRule{},
 		}
 	}
 
@@ -52,6 +54,14 @@ var _ Processor = (*processor)(nil)
 type processor struct {
 	openFile func(filePath string) (io.Reader, error)
 	rules    []Rule
+}
+
+func (proc *processor) close() *processor {
+	newProc := &processor{
+		openFile: proc.openFile,
+		rules:    proc.rules,
+	}
+	return newProc
 }
 
 func (proc *processor) ProcessFile(ctx context.Context, filePath string) (string, error) {
@@ -99,10 +109,10 @@ func (proc *processor) parseFile(ctx context.Context, filePath string) (_ []Node
 		}()
 	}
 
-	return proc.parse(ctx, filePath, r)
+	return proc.Parse(ctx, filePath, r)
 }
 
-func (proc *processor) parse(ctx context.Context, filePath string, r io.Reader) (_ []Node, err error) {
+func (proc *processor) Parse(ctx context.Context, filePath string, r io.Reader) (_ []Node, err error) {
 	ctx, span := otel.Tracer("ptproc").Start(ctx, "processor.parse")
 	defer func() {
 		if err != nil {
@@ -142,15 +152,11 @@ func (proc *processor) applyRules(ctx context.Context, baseFilePath string, ns [
 
 	span.SetAttributes(attribute.String("baseFilePath", baseFilePath), attribute.Int("nodeLength", len(ns)))
 
-	dirPath := filepath.Dir(baseFilePath)
-
 	for _, rule := range proc.rules {
 		opts := &RuleOptions{
-			OpenFile: func(externalFilePath string) (io.Reader, error) {
-				filePath := filepath.Join(dirPath, externalFilePath)
-				// TODO 実行パスより上位のパスには行けないようにする
-				return proc.openFile(filePath)
-			},
+			Processor:  proc,
+			OpenFile:   proc.openFile,
+			TargetPath: baseFilePath,
 		}
 		ns, err = rule.Apply(ctx, opts, ns)
 		if err != nil {
@@ -176,4 +182,10 @@ func (proc *processor) formatNodes(ctx context.Context, ns []Node) (_ string, er
 	}
 
 	return buf.String(), nil
+}
+
+func (proc *processor) WithRules(ctx context.Context, rules []Rule) (Processor, error) {
+	proc = proc.close()
+	proc.rules = rules
+	return proc, nil
 }
