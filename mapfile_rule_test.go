@@ -153,7 +153,7 @@ func Test_mapfileRule_Apply(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			output, err := proc.ProcessFile(ctx, "test.txt")
+			output, err := proc.ProcessFile(ctx, tt.inputFileName)
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("error = %v, wantErr %v", err, tt.wantErr)
 			} else {

@@ -12,75 +12,47 @@ import (
 	"github.com/MakeNowJust/heredoc/v2"
 )
 
-func Test_maprangeRule_Apply(t *testing.T) {
+func Test_rangeImportRule_Apply(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		name          string
 		startMarket   *regexp.Regexp
 		endMarket     *regexp.Regexp
-		externalFile  func(t *testing.T, filePath string) string
 		inputFileName string
+		rangeName     string
 		input         string
 		output        string
 		wantErr       bool
 	}{
 		{
-			name: "basic",
-			externalFile: func(t *testing.T, filePath string) string {
-				switch filePath {
-				case "external.txt":
-					return heredoc.Doc(`
-						test1
-						range:name
-						test2
-						range.end
-						test3
-					`)
-				default:
-					t.Fatalf("unexpected external file: %s", filePath)
-					return ""
-				}
-			},
+			name:          "basic",
 			inputFileName: "test.txt",
+			rangeName:     "name1",
 			input: heredoc.Doc(`
-				maprange:external.txt,name
-				maprange.end
+				range:name1
+				a
+				range.end
 			`),
 			output: heredoc.Doc(`
-				maprange:external.txt,name
-				test2
-				maprange.end
+				a
 			`),
 			wantErr: false,
 		},
 		{
-			name: "multiple range",
-			externalFile: func(t *testing.T, filePath string) string {
-				switch filePath {
-				case "external.txt":
-					return heredoc.Doc(`
-						range:name1
-						name1
-						range.end
-						range:name2
-						name2
-						range.end
-					`)
-				default:
-					t.Fatalf("unexpected external file: %s", filePath)
-					return ""
-				}
-			},
+			name:          "multiple",
 			inputFileName: "test.txt",
+			rangeName:     "name2",
 			input: heredoc.Doc(`
-				maprange:external.txt,name2
-				maprange.end
+				range:name1
+				a
+				range.end
+				range:name2
+				b
+				range.end
 			`),
 			output: heredoc.Doc(`
-				maprange:external.txt,name2
-				name2
-				maprange.end
+				b
 			`),
 			wantErr: false,
 		},
@@ -92,9 +64,10 @@ func Test_maprangeRule_Apply(t *testing.T) {
 
 			ctx := context.Background()
 
-			rule := &maprangeRule{
+			rule := &rangeImportRule{
 				startRegExp: tt.startMarket,
 				endRegExp:   tt.endMarket,
+				targetName:  tt.rangeName,
 			}
 
 			proc, err := NewProcessor(&ProcessorConfig{
@@ -102,11 +75,7 @@ func Test_maprangeRule_Apply(t *testing.T) {
 					if tt.inputFileName == filePath {
 						return bytes.NewBufferString(tt.input), nil
 					}
-					if tt.externalFile == nil {
-						return nil, os.ErrNotExist
-					}
-					s := tt.externalFile(t, filePath)
-					return bytes.NewBufferString(s), nil
+					return nil, os.ErrNotExist
 				},
 				Rules: []Rule{rule},
 			})
