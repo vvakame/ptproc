@@ -17,8 +17,8 @@ func Test_mapfileRule_Apply(t *testing.T) {
 
 	tests := []struct {
 		name          string
-		startMarket   *regexp.Regexp
-		endMarket     *regexp.Regexp
+		startRegExp   *regexp.Regexp
+		endRegExp     *regexp.Regexp
 		externalFile  func(t *testing.T, filePath string) string
 		inputFileName string
 		input         string
@@ -132,8 +132,8 @@ func Test_mapfileRule_Apply(t *testing.T) {
 			ctx := context.Background()
 
 			rule := &mapfileRule{
-				startRegExp: tt.startMarket,
-				endRegExp:   tt.endMarket,
+				startRegExp: tt.startRegExp,
+				endRegExp:   tt.endRegExp,
 			}
 
 			proc, err := NewProcessor(&ProcessorConfig{

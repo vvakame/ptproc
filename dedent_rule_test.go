@@ -8,19 +8,15 @@ import (
 	"reflect"
 	"regexp"
 	"testing"
-
-	"github.com/MakeNowJust/heredoc/v2"
 )
 
-func Test_rangeImportRule_Apply(t *testing.T) {
+func Test_dedentRule_Apply(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		name          string
-		startRegExp   *regexp.Regexp
-		endRegExp     *regexp.Regexp
+		spaceRegExp   *regexp.Regexp
 		inputFileName string
-		rangeName     string
 		input         string
 		output        string
 		wantErr       bool
@@ -28,33 +24,23 @@ func Test_rangeImportRule_Apply(t *testing.T) {
 		{
 			name:          "basic",
 			inputFileName: "test.txt",
-			rangeName:     "name1",
-			input: heredoc.Doc(`
-				range:name1
-				a
-				range.end
-			`),
-			output: heredoc.Doc(`
-				a
-			`),
-			wantErr: false,
+			input:         "  line1\n  line2\n",
+			output:        "line1\nline2\n",
+			wantErr:       false,
 		},
 		{
-			name:          "multiple",
+			name:          "multi level",
 			inputFileName: "test.txt",
-			rangeName:     "name2",
-			input: heredoc.Doc(`
-				range:name1
-				a
-				range.end
-				range:name2
-				b
-				range.end
-			`),
-			output: heredoc.Doc(`
-				b
-			`),
-			wantErr: false,
+			input:         "  line1\n    line2\n",
+			output:        "line1\n  line2\n",
+			wantErr:       false,
+		},
+		{
+			name:          "tab",
+			inputFileName: "test.txt",
+			input:         "\tline1\n\tline2\n",
+			output:        "line1\nline2\n",
+			wantErr:       false,
 		},
 	}
 	for _, tt := range tests {
@@ -64,10 +50,8 @@ func Test_rangeImportRule_Apply(t *testing.T) {
 
 			ctx := context.Background()
 
-			rule := &rangeImportRule{
-				startRegExp: tt.startRegExp,
-				endRegExp:   tt.endRegExp,
-				targetName:  tt.rangeName,
+			rule := &dedentRule{
+				spaceRegExp: tt.spaceRegExp,
 			}
 
 			proc, err := NewProcessor(&ProcessorConfig{
