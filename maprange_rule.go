@@ -77,6 +77,7 @@ func (rule *maprangeRule) Apply(ctx context.Context, opts *RuleOptions, ns []Nod
 						targetName: rangeName,
 					},
 					&dedentRule{},
+					&reindentRule{},
 				})
 				if err != nil {
 					return nil, err
