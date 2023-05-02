@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/urfave/cli/v2"
 	"github.com/vvakame/ptproc"
@@ -60,20 +61,44 @@ func realMain() error {
 				Usage:   "",
 				Aliases: []string{"r"},
 			},
+			&cli.StringFlag{
+				Name:    "glob",
+				Usage:   "",
+				Aliases: []string{"g"},
+			},
 		},
 		Action: func(cCtx *cli.Context) error {
 			ctx := cCtx.Context
 
 			useReplace := cCtx.Bool("replace")
+			globPattern := cCtx.String("glob")
+
+			slog.DebugCtx(ctx, "start processing", slog.Bool("replace", useReplace), slog.String("glob", globPattern))
+
+			var filePaths []string
+
+			if fs := cCtx.Args().Slice(); len(fs) != 0 {
+				filePaths = append(filePaths, fs...)
+			}
+
+			if globPattern != "" {
+				fs, err := filepath.Glob(globPattern)
+				if err != nil {
+					return err
+				}
+
+				filePaths = append(filePaths, fs...)
+			}
+
+			if len(filePaths) == 0 {
+				return errors.New("no files specified")
+			}
+
+			slog.DebugCtx(ctx, "target files", "filePaths", filePaths)
 
 			proc, err := ptproc.NewProcessor(nil)
 			if err != nil {
 				return err
-			}
-
-			filePaths := cCtx.Args().Slice()
-			if len(filePaths) == 0 {
-				return errors.New("no files specified")
 			}
 
 			var eg errgroup.Group
