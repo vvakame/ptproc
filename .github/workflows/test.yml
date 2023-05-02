@@ -1,0 +1,28 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - v*
+  pull_request_target: {}
+
+jobs:
+  test:
+    name: Run test
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
+        with:
+          go-version-file: "go.mod"
+          cache: true
+          cache-dependency-path: "go.sum"
+      - name: Run tests
+        run: |-
+          go test -v ./...
