@@ -65,7 +65,7 @@ func (proc *processor) close() *processor {
 }
 
 func (proc *processor) ProcessFile(ctx context.Context, filePath string) (string, error) {
-	slog.InfoCtx(ctx, "process file", slog.String("filePath", filePath))
+	slog.DebugCtx(ctx, "process file", slog.String("filePath", filePath))
 
 	ns, err := proc.parseFile(ctx, filePath)
 	if err != nil {
