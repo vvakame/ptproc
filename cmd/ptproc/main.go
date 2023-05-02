@@ -66,8 +66,6 @@ func realMain() error {
 
 			useReplace := cCtx.Bool("replace")
 
-			fmt.Println(useReplace)
-
 			proc, err := ptproc.NewProcessor(nil)
 			if err != nil {
 				return err
