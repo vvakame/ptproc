@@ -154,7 +154,7 @@ func (rule *mapfileRule) textToParams(ctx context.Context, s string) (*mapfilePa
 	if err == nil {
 		return &mapfileParams{File: v}, nil
 	} else {
-		slog.DebugCtx(ctx, "cue value convert error. ignored", "err", err, "value", s)
+		slog.DebugCtx(ctx, "failed to convert cue value to string. continue processing", "err", err, "value", s)
 	}
 
 	params := &mapfileParams{}

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"regexp"
 
+	"cuelang.org/go/cue/cuecontext"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"golang.org/x/exp/slog"
@@ -12,7 +13,7 @@ import (
 
 var _ Rule = (*rangeImportRule)(nil)
 
-var DefaultRangeImportStartRegEx = regexp.MustCompile(`range:(?P<RangeName>[^\s]+)`)
+var DefaultRangeImportStartRegEx = regexp.MustCompile(`range:(?P<Cue>[^\s]+)`)
 var DefaultRangeImportEndRegEx = regexp.MustCompile(`range.end`)
 
 type RangeImportRuleConfig struct {
@@ -37,6 +38,10 @@ type rangeImportRule struct {
 	targetName  string
 	startRegExp *regexp.Regexp
 	endRegExp   *regexp.Regexp
+}
+
+type rangeImportParams struct {
+	Name string `cue:"name"`
 }
 
 func (rule *rangeImportRule) Apply(ctx context.Context, opts *RuleOptions, ns []Node) (_ []Node, err error) {
@@ -69,8 +74,14 @@ func (rule *rangeImportRule) Apply(ctx context.Context, opts *RuleOptions, ns []
 
 		if !inRangeImportRange {
 			group := startRegExp.FindStringSubmatch(txt)
+
 			if len(group) == 2 {
-				name := group[1]
+				params, err := rule.textToParams(ctx, group[1])
+				if err != nil {
+					return nil, err
+				}
+
+				name := params.Name
 				slog.DebugCtx(ctx, "find range directive", slog.String("name", name))
 
 				if name != rule.targetName {
@@ -91,4 +102,31 @@ func (rule *rangeImportRule) Apply(ctx context.Context, opts *RuleOptions, ns []
 	}
 
 	return newNodes, nil
+}
+
+func (rule *rangeImportRule) textToParams(ctx context.Context, s string) (*rangeImportParams, error) {
+	cuectx := cuecontext.New()
+
+	cv := cuectx.CompileString(s)
+
+	err := cv.Validate()
+	if err != nil {
+		slog.DebugCtx(ctx, "cue validate failed. evaluate to string", "err", err, "value", s)
+		return &rangeImportParams{Name: s}, nil
+	}
+
+	v, err := cv.String()
+	if err == nil {
+		return &rangeImportParams{Name: v}, nil
+	} else {
+		slog.DebugCtx(ctx, "failed to convert cue value to string. continue processing", "err", err, "value", s)
+	}
+
+	params := &rangeImportParams{}
+	err = cv.Decode(params)
+	if err != nil {
+		return nil, err
+	}
+
+	return params, nil
 }

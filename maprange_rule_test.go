@@ -84,6 +84,87 @@ func Test_maprangeRule_Apply(t *testing.T) {
 			`),
 			wantErr: false,
 		},
+		{
+			name: "cue string",
+			externalFile: func(t *testing.T, filePath string) string {
+				switch filePath {
+				case "external.txt":
+					return heredoc.Doc(`
+						test1
+						range:name
+						test2
+						range.end
+						test3
+					`)
+				default:
+					t.Fatalf("unexpected external file: %s", filePath)
+					return ""
+				}
+			},
+			inputFileName: "test.txt",
+			input: heredoc.Doc(`
+				maprange:"external.txt,name"
+				maprange.end
+			`),
+			output: heredoc.Doc(`
+				maprange:"external.txt,name"
+				test2
+				maprange.end
+			`),
+			wantErr: false,
+		},
+		{
+			name: "cue structure",
+			externalFile: func(t *testing.T, filePath string) string {
+				switch filePath {
+				case "external.txt":
+					return heredoc.Doc(`
+						test1
+						range:name
+						test2
+						range.end
+						test3
+					`)
+				default:
+					t.Fatalf("unexpected external file: %s", filePath)
+					return ""
+				}
+			},
+			inputFileName: "test.txt",
+			input: heredoc.Doc(`
+				maprange:file:"external.txt",name:"name"
+				maprange.end
+			`),
+			output: heredoc.Doc(`
+				maprange:file:"external.txt",name:"name"
+				test2
+				maprange.end
+			`),
+			wantErr: false,
+		},
+		{
+			name: "no end directive",
+			externalFile: func(t *testing.T, filePath string) string {
+				switch filePath {
+				case "external.txt":
+					return heredoc.Doc(`
+						test1
+						range:name
+						test2
+						range.end
+						test3
+					`)
+				default:
+					t.Fatalf("unexpected external file: %s", filePath)
+					return ""
+				}
+			},
+			inputFileName: "test.txt",
+			input: heredoc.Doc(`
+				maprange:file:"external.txt",name:"name"
+			`),
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		tt := tt

@@ -56,6 +56,34 @@ func Test_rangeImportRule_Apply(t *testing.T) {
 			`),
 			wantErr: false,
 		},
+		{
+			name:          "cue string",
+			inputFileName: "test.txt",
+			rangeName:     "name1",
+			input: heredoc.Doc(`
+				range:"name1"
+				a
+				range.end
+			`),
+			output: heredoc.Doc(`
+				a
+			`),
+			wantErr: false,
+		},
+		{
+			name:          "cue structure",
+			inputFileName: "test.txt",
+			rangeName:     "name1",
+			input: heredoc.Doc(`
+				range:name:"name1"
+				a
+				range.end
+			`),
+			output: heredoc.Doc(`
+				a
+			`),
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		tt := tt
