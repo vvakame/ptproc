@@ -7,7 +7,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"regexp"
 
 	"github.com/urfave/cli/v2"
 	"github.com/vvakame/ptproc"
@@ -95,102 +94,9 @@ func realMain() error {
 			} else if err != nil {
 				return err
 			} else {
-				var rules []ptproc.Rule
-
-				slog.DebugCtx(ctx, "config file loaded", "config", rawCfg)
-
-				{
-					var mapfileStartRegExp *regexp.Regexp
-					if v := rawCfg.Mapfile.StartRegExp; v != "" {
-						mapfileStartRegExp, err = regexp.Compile(v)
-						if err != nil {
-							return fmt.Errorf("mapfile.startRegExp compile failed: %w", err)
-						}
-					}
-					var mapfileEndRegExp *regexp.Regexp
-					if v := rawCfg.Mapfile.EndRegExp; v != "" {
-						mapfileEndRegExp, err = regexp.Compile(v)
-						if err != nil {
-							return fmt.Errorf("mapfile.endRegExp compile failed: %w", err)
-						}
-					}
-
-					var embedRules []ptproc.Rule
-					if !rawCfg.DisableRewriteIndent {
-						rule, err := ptproc.NewReindentRule(&ptproc.ReindentRuleConfig{
-							IndentLevel: rawCfg.IndentWidth,
-						})
-						if err != nil {
-							return err
-						}
-
-						embedRules = append(embedRules, rule)
-					}
-
-					rule, err := ptproc.NewMapfileRule(&ptproc.MapfileRuleConfig{
-						StartRegExp: mapfileStartRegExp,
-						EndRegExp:   mapfileEndRegExp,
-						EmbedRules:  embedRules,
-					})
-					if err != nil {
-						return err
-					}
-
-					rules = append(rules, rule)
-				}
-
-				{
-					var maprangeStartRegExp *regexp.Regexp
-					if v := rawCfg.Maprange.StartRegExp; v != "" {
-						maprangeStartRegExp, err = regexp.Compile(v)
-						if err != nil {
-							return fmt.Errorf("maprange.startRegExp compile failed: %w", err)
-						}
-					}
-					var maprangeEndRegExp *regexp.Regexp
-					if v := rawCfg.Maprange.EndRegExp; v != "" {
-						maprangeEndRegExp, err = regexp.Compile(v)
-						if err != nil {
-							return fmt.Errorf("mapfile.endRegExp compile failed: %w", err)
-						}
-					}
-
-					var embedRules []ptproc.Rule
-					if !rawCfg.DisableRewriteIndent {
-						rule, err := ptproc.NewDedentRule(&ptproc.DedentRuleConfig{
-							SpaceRegExp: nil,
-						})
-						if err != nil {
-							return err
-						}
-
-						embedRules = append(embedRules, rule)
-					}
-					if !rawCfg.DisableRewriteIndent {
-						rule, err := ptproc.NewReindentRule(&ptproc.ReindentRuleConfig{
-							IndentLevel: rawCfg.IndentWidth,
-						})
-						if err != nil {
-							return err
-						}
-
-						embedRules = append(embedRules, rule)
-					}
-
-					rule, err := ptproc.NewMaprangeRule(&ptproc.MaprangeRuleConfig{
-						StartRegExp: maprangeStartRegExp,
-						EndRegExp:   maprangeEndRegExp,
-						EmbedRules:  embedRules,
-					})
-					if err != nil {
-						return err
-					}
-
-					rules = append(rules, rule)
-				}
-
-				cfg = &ptproc.ProcessorConfig{
-					Rules: rules,
+				cfg, err = rawCfg.ToProcessorConfig(ctx)
+				if err != nil {
+					return err
 				}
 			}
 

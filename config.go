@@ -58,6 +58,8 @@ func LoadConfig(ctx context.Context, filePath string) (_ *Config, err error) {
 		return nil, err
 	}
 
+	slog.DebugCtx(ctx, "config file loaded", "config", cfg)
+
 	return cfg, nil
 }
 
@@ -141,6 +143,105 @@ func (cfg *Config) fillByDefault() error {
 	}
 
 	return nil
+}
+
+func (cfg *Config) ToProcessorConfig(ctx context.Context) (_ *ProcessorConfig, err error) {
+	var rules []Rule
+	{
+		var mapfileStartRegExp *regexp.Regexp
+		if v := cfg.Mapfile.StartRegExp; v != "" {
+			mapfileStartRegExp, err = regexp.Compile(v)
+			if err != nil {
+				return nil, fmt.Errorf("mapfile.startRegExp compile failed: %w", err)
+			}
+		}
+		var mapfileEndRegExp *regexp.Regexp
+		if v := cfg.Mapfile.EndRegExp; v != "" {
+			mapfileEndRegExp, err = regexp.Compile(v)
+			if err != nil {
+				return nil, fmt.Errorf("mapfile.endRegExp compile failed: %w", err)
+			}
+		}
+
+		var embedRules []Rule
+		if !cfg.DisableRewriteIndent {
+			rule, err := NewReindentRule(&ReindentRuleConfig{
+				IndentLevel: cfg.IndentWidth,
+			})
+			if err != nil {
+				return nil, err
+			}
+
+			embedRules = append(embedRules, rule)
+		}
+
+		rule, err := NewMapfileRule(&MapfileRuleConfig{
+			StartRegExp: mapfileStartRegExp,
+			EndRegExp:   mapfileEndRegExp,
+			EmbedRules:  embedRules,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		rules = append(rules, rule)
+	}
+
+	{
+		var maprangeStartRegExp *regexp.Regexp
+		if v := cfg.Maprange.StartRegExp; v != "" {
+			maprangeStartRegExp, err = regexp.Compile(v)
+			if err != nil {
+				return nil, fmt.Errorf("maprange.startRegExp compile failed: %w", err)
+			}
+		}
+		var maprangeEndRegExp *regexp.Regexp
+		if v := cfg.Maprange.EndRegExp; v != "" {
+			maprangeEndRegExp, err = regexp.Compile(v)
+			if err != nil {
+				return nil, fmt.Errorf("mapfile.endRegExp compile failed: %w", err)
+			}
+		}
+
+		var embedRules []Rule
+		if !cfg.DisableRewriteIndent {
+			rule, err := NewDedentRule(&DedentRuleConfig{
+				SpaceRegExp: nil,
+			})
+			if err != nil {
+				return nil, err
+			}
+
+			embedRules = append(embedRules, rule)
+		}
+		if !cfg.DisableRewriteIndent {
+			rule, err := NewReindentRule(&ReindentRuleConfig{
+				IndentLevel: cfg.IndentWidth,
+			})
+			if err != nil {
+				return nil, err
+			}
+
+			embedRules = append(embedRules, rule)
+		}
+
+		rule, err := NewMaprangeRule(&MaprangeRuleConfig{
+			StartRegExp: maprangeStartRegExp,
+			EndRegExp:   maprangeEndRegExp,
+			EmbedRules:  embedRules,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		rules = append(rules, rule)
+	}
+
+	procCfg := &ProcessorConfig{
+		Rules: rules,
+	}
+
+	return procCfg, nil
 }
 
 func (d *MapfileDirective) LogValue() slog.Value {
