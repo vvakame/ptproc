@@ -21,6 +21,7 @@ var DefaultMaprangeEndRegEx = regexp.MustCompile(`maprange.end`)
 type MaprangeRuleConfig struct {
 	StartRegExp *regexp.Regexp
 	EndRegExp   *regexp.Regexp
+	DefaultSkip int
 	EmbedRules  []Rule
 }
 
@@ -32,6 +33,7 @@ func NewMaprangeRule(cfg *MaprangeRuleConfig) (Rule, error) {
 	return &maprangeRule{
 		startRegExp: cfg.StartRegExp,
 		endRegExp:   cfg.EndRegExp,
+		defaultSkip: cfg.DefaultSkip,
 		embedRules:  cfg.EmbedRules,
 	}, nil
 }
@@ -39,6 +41,7 @@ func NewMaprangeRule(cfg *MaprangeRuleConfig) (Rule, error) {
 type maprangeRule struct {
 	startRegExp *regexp.Regexp
 	endRegExp   *regexp.Regexp
+	defaultSkip int
 
 	embedRules []Rule
 }
@@ -46,6 +49,7 @@ type maprangeRule struct {
 type maprangeParams struct {
 	File string `cue:"file"`
 	Name string `cue:"name"`
+	Skip *int   `cue:"skip"`
 }
 
 func (rule *maprangeRule) Apply(ctx context.Context, opts *RuleOptions, ns []Node) (_ []Node, err error) {
@@ -71,6 +75,11 @@ func (rule *maprangeRule) Apply(ctx context.Context, opts *RuleOptions, ns []Nod
 	newNodes := make([]Node, 0, len(ns))
 
 	var inMaprangeRange bool
+	var realFilePath string
+	var rangeName string
+	var skip int
+	var skipped int
+	var skipBuffer []Node
 	for _, n := range ns {
 		txt := n.Text()
 
@@ -88,58 +97,46 @@ func (rule *maprangeRule) Apply(ctx context.Context, opts *RuleOptions, ns []Nod
 			}
 
 			filePath := params.File
-			realFilePath := opts.FilePath(filePath)
-			rangeName := params.Name
+			realFilePath = opts.FilePath(filePath)
+			rangeName = params.Name
+			skip = rule.defaultSkip
+			if params.Skip != nil {
+				skip = *params.Skip
+			}
+			skipped = 0
 			slog.DebugCtx(ctx, "find maprange directive",
 				slog.String("filePath", filePath),
 				slog.String("realFilePath", realFilePath),
 				slog.String("rangeName", rangeName),
+				slog.Int("skip", skip),
 			)
 
 			inMaprangeRange = true
 			newNodes = append(newNodes, n)
-
-			r, err := opts.OpenFile(realFilePath)
-			if err != nil {
-				return nil, err
-			}
-			b, err := io.ReadAll(r)
-			if err != nil {
-				return nil, err
-			}
-			s := string(b)
-
-			rangeImportRule, err := NewRangeImportRule(&RangeImportRuleConfig{
-				Name: rangeName,
-			})
-			if err != nil {
-				return nil, err
+		} else if endRegExp.MatchString(txt) {
+			inMaprangeRange = false
+			head := len(skipBuffer) - skip
+			if head < 0 {
+				head = 0
 			}
 
-			embedRules := append([]Rule{rangeImportRule}, rule.embedRules...)
-
-			subProc, err := opts.Processor.WithRules(ctx, embedRules)
+			s, err := rule.loadEmbed(ctx, opts, realFilePath, rangeName)
 			if err != nil {
 				return nil, err
-			}
-
-			s, err = subProc.ProcessFile(ctx, realFilePath)
-			if err != nil {
-				return nil, err
-			}
-
-			if !strings.HasSuffix(s, "\n") {
-				s += "\n"
 			}
 
 			newNodes = append(newNodes, &node{
 				text: s,
 			})
-		} else if endRegExp.MatchString(txt) {
-			inMaprangeRange = false
+
+			newNodes = append(newNodes, skipBuffer[head:]...)
 			newNodes = append(newNodes, n)
+			skipBuffer = nil
+		} else if skipped < skip {
+			newNodes = append(newNodes, n)
+			skipped++
 		} else {
-			continue
+			skipBuffer = append(skipBuffer, n)
 		}
 	}
 
@@ -148,6 +145,43 @@ func (rule *maprangeRule) Apply(ctx context.Context, opts *RuleOptions, ns []Nod
 	}
 
 	return newNodes, nil
+}
+
+func (rule *maprangeRule) loadEmbed(ctx context.Context, opts *RuleOptions, filePath string, rangeName string) (_ string, err error) {
+	r, err := opts.OpenFile(filePath)
+	if err != nil {
+		return "", err
+	}
+	b, err := io.ReadAll(r)
+	if err != nil {
+		return "", err
+	}
+	s := string(b)
+
+	rangeImportRule, err := NewRangeImportRule(&RangeImportRuleConfig{
+		Name: rangeName,
+	})
+	if err != nil {
+		return "", err
+	}
+
+	embedRules := append([]Rule{rangeImportRule}, rule.embedRules...)
+
+	subProc, err := opts.Processor.WithRules(ctx, embedRules)
+	if err != nil {
+		return "", err
+	}
+
+	s, err = subProc.ProcessFile(ctx, filePath)
+	if err != nil {
+		return "", err
+	}
+
+	if !strings.HasSuffix(s, "\n") {
+		s += "\n"
+	}
+
+	return s, nil
 }
 
 func (rule *maprangeRule) textToParams(ctx context.Context, s string) (*maprangeParams, error) {

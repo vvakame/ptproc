@@ -1,0 +1,5 @@
+hello, world!
+range:test
+good afternoon, world!
+range.end
+good night, world!

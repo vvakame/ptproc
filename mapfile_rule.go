@@ -20,6 +20,7 @@ var DefaultMapfileEndRegEx = regexp.MustCompile(`mapfile.end`)
 type MapfileRuleConfig struct {
 	StartRegExp *regexp.Regexp
 	EndRegExp   *regexp.Regexp
+	DefaultSkip int
 	EmbedRules  []Rule
 }
 
@@ -31,6 +32,7 @@ func NewMapfileRule(cfg *MapfileRuleConfig) (Rule, error) {
 	return &mapfileRule{
 		startRegExp: cfg.StartRegExp,
 		endRegExp:   cfg.EndRegExp,
+		defaultSkip: cfg.DefaultSkip,
 		embedRules:  cfg.EmbedRules,
 	}, nil
 }
@@ -38,12 +40,14 @@ func NewMapfileRule(cfg *MapfileRuleConfig) (Rule, error) {
 type mapfileRule struct {
 	startRegExp *regexp.Regexp
 	endRegExp   *regexp.Regexp
+	defaultSkip int
 
 	embedRules []Rule
 }
 
 type mapfileParams struct {
 	File string `cue:"file"`
+	Skip *int   `cue:"skip"`
 }
 
 func (rule *mapfileRule) Apply(ctx context.Context, opts *RuleOptions, ns []Node) (_ []Node, err error) {
@@ -69,6 +73,10 @@ func (rule *mapfileRule) Apply(ctx context.Context, opts *RuleOptions, ns []Node
 	newNodes := make([]Node, 0, len(ns))
 
 	var inMapfileRange bool
+	var realFilePath string
+	var skip int
+	var skipped int
+	var skipBuffer []Node
 	for _, n := range ns {
 		txt := n.Text()
 
@@ -86,49 +94,44 @@ func (rule *mapfileRule) Apply(ctx context.Context, opts *RuleOptions, ns []Node
 			}
 
 			filePath := params.File
-			realFilePath := opts.FilePath(filePath)
+			realFilePath = opts.FilePath(filePath)
+			skip = rule.defaultSkip
+			if params.Skip != nil {
+				skip = *params.Skip
+			}
+			skipped = 0
 			slog.DebugCtx(ctx, "find mapfile directive",
 				slog.String("filePath", filePath),
 				slog.String("realFilePath", realFilePath),
+				slog.Int("skip", skip),
 			)
 
 			inMapfileRange = true
 			newNodes = append(newNodes, n)
+		} else if endRegExp.MatchString(txt) {
+			inMapfileRange = false
+			head := len(skipBuffer) - skip
+			if head < 0 {
+				head = 0
+			}
 
-			r, err := opts.OpenFile(realFilePath)
+			s, err := rule.loadEmbed(ctx, opts, realFilePath)
 			if err != nil {
 				return nil, err
-			}
-			b, err := io.ReadAll(r)
-			if err != nil {
-				return nil, err
-			}
-			s := string(b)
-
-			if len(rule.embedRules) != 0 {
-				subProc, err := opts.Processor.WithRules(ctx, rule.embedRules)
-				if err != nil {
-					return nil, err
-				}
-
-				s, err = subProc.ProcessFile(ctx, realFilePath)
-				if err != nil {
-					return nil, err
-				}
-			}
-
-			if !strings.HasSuffix(s, "\n") {
-				s += "\n"
 			}
 
 			newNodes = append(newNodes, &node{
 				text: s,
 			})
-		} else if endRegExp.MatchString(txt) {
-			inMapfileRange = false
+
+			newNodes = append(newNodes, skipBuffer[head:]...)
 			newNodes = append(newNodes, n)
+			skipBuffer = nil
+		} else if skipped < skip {
+			newNodes = append(newNodes, n)
+			skipped++
 		} else {
-			continue
+			skipBuffer = append(skipBuffer, n)
 		}
 	}
 
@@ -137,6 +140,36 @@ func (rule *mapfileRule) Apply(ctx context.Context, opts *RuleOptions, ns []Node
 	}
 
 	return newNodes, nil
+}
+
+func (rule *mapfileRule) loadEmbed(ctx context.Context, opts *RuleOptions, filePath string) (_ string, err error) {
+	r, err := opts.OpenFile(filePath)
+	if err != nil {
+		return "", err
+	}
+	b, err := io.ReadAll(r)
+	if err != nil {
+		return "", err
+	}
+	s := string(b)
+
+	if len(rule.embedRules) != 0 {
+		subProc, err := opts.Processor.WithRules(ctx, rule.embedRules)
+		if err != nil {
+			return "", err
+		}
+
+		s, err = subProc.ProcessFile(ctx, filePath)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	if !strings.HasSuffix(s, "\n") {
+		s += "\n"
+	}
+
+	return s, nil
 }
 
 func (rule *mapfileRule) textToParams(ctx context.Context, s string) (*mapfileParams, error) {
