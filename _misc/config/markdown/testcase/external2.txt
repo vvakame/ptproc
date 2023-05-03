@@ -1,0 +1,5 @@
+Foo
+range:range
+Bar
+range.end
+Buzz

@@ -1,0 +1,6 @@
+line1
+	range:range
+	tab indent level 1
+		tab indent level 2
+	range.end
+line3

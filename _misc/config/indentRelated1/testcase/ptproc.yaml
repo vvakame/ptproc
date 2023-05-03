@@ -1,0 +1,5 @@
+mapfile:
+  disableRewriteIndent: true
+maprange:
+  disableDedent: true
+  disableRewriteIndent: true

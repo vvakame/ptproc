@@ -14,7 +14,7 @@ import (
 
 var _ Rule = (*mapfileRule)(nil)
 
-var DefaultMapfileStartRegEx = regexp.MustCompile(`mapfile:(?P<Cue>[^\s]+)`)
+var DefaultMapfileStartRegEx = regexp.MustCompile(`mapfile:([^\s]+)`)
 var DefaultMapfileEndRegEx = regexp.MustCompile(`mapfile.end`)
 
 type MapfileRuleConfig struct {

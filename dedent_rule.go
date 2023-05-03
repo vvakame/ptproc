@@ -10,7 +10,7 @@ import (
 
 var _ Rule = (*dedentRule)(nil)
 
-var DefaultDedentSpaceRegEx = regexp.MustCompile(`^(?P<Space>[\s]+)`)
+var DefaultDedentSpaceRegEx = regexp.MustCompile(`^([\s]+)`)
 
 type DedentRuleConfig struct {
 	SpaceRegExp *regexp.Regexp

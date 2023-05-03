@@ -16,21 +16,25 @@ var _ slog.LogValuer = (*MapfileDirective)(nil)
 var _ slog.LogValuer = (*MaprangeDirective)(nil)
 
 type Config struct {
-	Mapfile              *MapfileDirective  `yaml:"mapfile"`
-	Maprange             *MaprangeDirective `yaml:"maprange"`
-	DisableRewriteIndent bool               `yaml:"disableRewriteIndent"`
-	IndentWidth          int                `yaml:"indentWidth"`
+	Mapfile  *MapfileDirective  `yaml:"mapfile"`
+	Maprange *MaprangeDirective `yaml:"maprange"`
 }
 
 type MapfileDirective struct {
-	StartRegExp string `yaml:"startRegExp"`
-	EndRegExp   string `yaml:"endRegExp"`
+	StartRegExp          string `yaml:"startRegExp"`
+	EndRegExp            string `yaml:"endRegExp"`
+	DisableRewriteIndent bool   `yaml:"disableRewriteIndent"`
+	IndentWidth          int    `yaml:"indentWidth"`
+	DefaultSkip          int    `yaml:"defaultSkip"`
 }
 
 type MaprangeDirective struct {
-	StartRegExp   string `yaml:"startRegExp"`
-	EndRegExp     string `yaml:"endRegExp"`
-	DisableDedent bool   `yaml:"disableDedent"`
+	StartRegExp          string `yaml:"startRegExp"`
+	EndRegExp            string `yaml:"endRegExp"`
+	DisableDedent        bool   `yaml:"disableDedent"`
+	DisableRewriteIndent bool   `yaml:"disableRewriteIndent"`
+	IndentWidth          int    `yaml:"indentWidth"`
+	DefaultSkip          int    `yaml:"defaultSkip"`
 }
 
 func LoadConfig(ctx context.Context, filePath string) (_ *Config, err error) {
@@ -67,29 +71,17 @@ func (cfg *Config) LogValue() slog.Value {
 	return slog.GroupValue(
 		slog.Any("mapfile", cfg.Mapfile),
 		slog.Any("maprange", cfg.Maprange),
-		slog.Bool("disableRewriteIndent", cfg.DisableRewriteIndent),
-		slog.Int("indentWidth", cfg.IndentWidth),
 	)
 }
 
 func (cfg *Config) fillByDefault() error {
-	regexpHasGroups := func(re *regexp.Regexp, ss ...string) bool {
-	OUTER:
-		for _, s := range ss {
-			for _, g := range re.SubexpNames() {
-				if s == g {
-					continue OUTER
-				}
-			}
-			return false
-		}
-		return true
-	}
-
 	if cfg.Mapfile == nil {
 		cfg.Mapfile = &MapfileDirective{
-			StartRegExp: "",
-			EndRegExp:   "",
+			StartRegExp:          "",
+			EndRegExp:            "",
+			DisableRewriteIndent: false,
+			IndentWidth:          0,
+			DefaultSkip:          0,
 		}
 	}
 	if cfg.Mapfile.StartRegExp == "" {
@@ -99,7 +91,7 @@ func (cfg *Config) fillByDefault() error {
 		if err != nil {
 			return fmt.Errorf("mapfile start regexp compile failed: %w", err)
 		}
-		if !regexpHasGroups(re, "FilePath") {
+		if len(re.SubexpNames()) != 2 {
 			return fmt.Errorf("mapfile start regexp doesn't satisfied restriction")
 		}
 	}
@@ -111,11 +103,18 @@ func (cfg *Config) fillByDefault() error {
 			return fmt.Errorf("mapfile end regexp compile failed: %w", err)
 		}
 	}
+	if cfg.Mapfile.IndentWidth == 0 {
+		cfg.Mapfile.IndentWidth = 2
+	}
 
 	if cfg.Maprange == nil {
 		cfg.Maprange = &MaprangeDirective{
-			StartRegExp: "",
-			EndRegExp:   "",
+			StartRegExp:          "",
+			EndRegExp:            "",
+			DisableDedent:        false,
+			DisableRewriteIndent: false,
+			IndentWidth:          0,
+			DefaultSkip:          0,
 		}
 	}
 	if cfg.Maprange.StartRegExp == "" {
@@ -125,7 +124,7 @@ func (cfg *Config) fillByDefault() error {
 		if err != nil {
 			return fmt.Errorf("maprange start regexp compile failed: %w", err)
 		}
-		if !regexpHasGroups(re, "FilePath", "RangeName") {
+		if len(re.SubexpNames()) != 2 {
 			return fmt.Errorf("maprange start regexp doesn't satisfied restriction")
 		}
 	}
@@ -137,9 +136,8 @@ func (cfg *Config) fillByDefault() error {
 			return fmt.Errorf("maprange end regexp compile failed: %w", err)
 		}
 	}
-
-	if cfg.IndentWidth == 0 {
-		cfg.IndentWidth = 2
+	if cfg.Maprange.IndentWidth == 0 {
+		cfg.Maprange.IndentWidth = 2
 	}
 
 	return nil
@@ -164,9 +162,9 @@ func (cfg *Config) ToProcessorConfig(ctx context.Context) (_ *ProcessorConfig, e
 		}
 
 		var embedRules []Rule
-		if !cfg.DisableRewriteIndent {
+		if !cfg.Mapfile.DisableRewriteIndent {
 			rule, err := NewReindentRule(&ReindentRuleConfig{
-				IndentLevel: cfg.IndentWidth,
+				IndentLevel: cfg.Mapfile.IndentWidth,
 			})
 			if err != nil {
 				return nil, err
@@ -178,6 +176,7 @@ func (cfg *Config) ToProcessorConfig(ctx context.Context) (_ *ProcessorConfig, e
 		rule, err := NewMapfileRule(&MapfileRuleConfig{
 			StartRegExp: mapfileStartRegExp,
 			EndRegExp:   mapfileEndRegExp,
+			DefaultSkip: cfg.Mapfile.DefaultSkip,
 			EmbedRules:  embedRules,
 		})
 		if err != nil {
@@ -204,7 +203,7 @@ func (cfg *Config) ToProcessorConfig(ctx context.Context) (_ *ProcessorConfig, e
 		}
 
 		var embedRules []Rule
-		if !cfg.DisableRewriteIndent {
+		if !cfg.Maprange.DisableDedent {
 			rule, err := NewDedentRule(&DedentRuleConfig{
 				SpaceRegExp: nil,
 			})
@@ -214,9 +213,9 @@ func (cfg *Config) ToProcessorConfig(ctx context.Context) (_ *ProcessorConfig, e
 
 			embedRules = append(embedRules, rule)
 		}
-		if !cfg.DisableRewriteIndent {
+		if !cfg.Maprange.DisableRewriteIndent {
 			rule, err := NewReindentRule(&ReindentRuleConfig{
-				IndentLevel: cfg.IndentWidth,
+				IndentLevel: cfg.Maprange.IndentWidth,
 			})
 			if err != nil {
 				return nil, err
@@ -228,6 +227,7 @@ func (cfg *Config) ToProcessorConfig(ctx context.Context) (_ *ProcessorConfig, e
 		rule, err := NewMaprangeRule(&MaprangeRuleConfig{
 			StartRegExp: maprangeStartRegExp,
 			EndRegExp:   maprangeEndRegExp,
+			DefaultSkip: cfg.Maprange.DefaultSkip,
 			EmbedRules:  embedRules,
 		})
 		if err != nil {
@@ -248,6 +248,9 @@ func (d *MapfileDirective) LogValue() slog.Value {
 	return slog.GroupValue(
 		slog.String("startRegExp", d.StartRegExp),
 		slog.String("endRegExp", d.EndRegExp),
+		slog.Bool("disableRewriteIndent", d.DisableRewriteIndent),
+		slog.Int("indentWidth", d.IndentWidth),
+		slog.Int("defaultSkip", d.DefaultSkip),
 	)
 }
 
@@ -255,5 +258,9 @@ func (d *MaprangeDirective) LogValue() slog.Value {
 	return slog.GroupValue(
 		slog.String("startRegExp", d.StartRegExp),
 		slog.String("endRegExp", d.EndRegExp),
+		slog.Bool("disableDedent", d.DisableDedent),
+		slog.Bool("disableRewriteIndent", d.DisableRewriteIndent),
+		slog.Int("indentWidth", d.IndentWidth),
+		slog.Int("defaultSkip", d.DefaultSkip),
 	)
 }

@@ -1,0 +1,13 @@
+mapfile:
+  startRegExp: "mapfile:([^\\s]+)"
+  endRegExp: mapfile.end
+  disableRewriteIndent: true
+  indentWidth: 2
+  defaultSkip: 0
+maprange:
+  startRegExp: "maprange:([^\\s]+)"
+  endRegExp: maprange.end
+  disableDedent: true
+  disableRewriteIndent: true
+  indentWidth: 2
+  defaultSkip: 0

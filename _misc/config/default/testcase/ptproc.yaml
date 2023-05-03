@@ -1,0 +1,28 @@
+# config with default values
+
+# for mapfile directive
+mapfile:
+  # regexp for a single line that detects the beginning of mapfile. must contain one group.
+  startRegExp: "mapfile:([^\s]+)"
+  # regexp for a single line that detects the end of mapfile.
+  endRegExp: "mapfile.end"
+  # prevent rewriting the indent of imported files.
+  disableRewriteIndent: false
+  # how number of spaces per 1 indent.
+  indentWidth: 2
+  # how many lines of original content to preserve inside the directive.
+  defaultSkip: 0
+# for maprange directive
+maprange:
+  # regexp for a single line that detects the beginning of maprange. must contain one group.
+  startRegExp: "maprange:([^\s]+)"
+  # regexp for a single line that detects the end of mapfile.
+  endRegExp: "maprange.end"
+  # prevent the stripping of redundant indents contained in the imported range.
+  disableDedent: false
+  # prevent rewriting the indent of imported files.
+  disableRewriteIndent: false
+  # how number of spaces per 1 indent.
+  indentWidth: 2
+  # how many lines of original content to preserve inside the directive.
+  defaultSkip: 0

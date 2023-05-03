@@ -15,7 +15,7 @@ import (
 
 var _ Rule = (*maprangeRule)(nil)
 
-var DefaultMaprangeStartRegEx = regexp.MustCompile(`maprange:(?P<Cue>[^\s]+)`)
+var DefaultMaprangeStartRegEx = regexp.MustCompile(`maprange:([^\s]+)`)
 var DefaultMaprangeEndRegEx = regexp.MustCompile(`maprange.end`)
 
 type MaprangeRuleConfig struct {
