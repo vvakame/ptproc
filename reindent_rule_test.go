@@ -56,8 +56,11 @@ func Test_reindentRule_Apply(t *testing.T) {
 
 			ctx := context.Background()
 
-			rule := &reindentRule{
-				indentLevel: tt.indentLevel,
+			rule, err := NewReindentRule(&ReindentRuleConfig{
+				IndentLevel: tt.indentLevel,
+			})
+			if err != nil {
+				t.Fatal(err)
 			}
 
 			proc, err := NewProcessor(&ProcessorConfig{

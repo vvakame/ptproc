@@ -54,3 +54,9 @@ Good evening, world.
 maprange.end
 Good night, world.
 ```
+
+## examples
+
+```shell
+$ ptproc --logLevel debug --config ./_misc/config/ptproc.yaml -g "./_misc/testdata/*/*/testcase/test.md"
+```

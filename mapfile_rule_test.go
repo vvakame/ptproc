@@ -131,9 +131,12 @@ func Test_mapfileRule_Apply(t *testing.T) {
 
 			ctx := context.Background()
 
-			rule := &mapfileRule{
-				startRegExp: tt.startRegExp,
-				endRegExp:   tt.endRegExp,
+			rule, err := NewMapfileRule(&MapfileRuleConfig{
+				StartRegExp: tt.startRegExp,
+				EndRegExp:   tt.endRegExp,
+			})
+			if err != nil {
+				t.Fatal(err)
 			}
 
 			proc, err := NewProcessor(&ProcessorConfig{

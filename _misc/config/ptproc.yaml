@@ -1,0 +1,8 @@
+mapfile:
+  startRegExp: "mapfile:(?P<FilePath>[^\s]+)"
+  endRegExp:   "mapfile.end"
+maprange:
+  startRegExp: "maprange:(?P<FilePath>[^\s,]+),(?P<RangeName>[^\s]+)"
+  endRegExp:   "maprange.end"
+disableRewriteIndent: false
+indentWidth: 2

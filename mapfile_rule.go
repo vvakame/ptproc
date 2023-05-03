@@ -16,9 +16,29 @@ var _ Rule = (*mapfileRule)(nil)
 var DefaultMapfileStartRegEx = regexp.MustCompile(`mapfile:(?P<FilePath>[^\s]+)`)
 var DefaultMapfileEndRegEx = regexp.MustCompile(`mapfile.end`)
 
+type MapfileRuleConfig struct {
+	StartRegExp *regexp.Regexp
+	EndRegExp   *regexp.Regexp
+	EmbedRules  []Rule
+}
+
+func NewMapfileRule(cfg *MapfileRuleConfig) (Rule, error) {
+	if cfg == nil {
+		cfg = &MapfileRuleConfig{}
+	}
+
+	return &mapfileRule{
+		startRegExp: cfg.StartRegExp,
+		endRegExp:   cfg.EndRegExp,
+		embedRules:  cfg.EmbedRules,
+	}, nil
+}
+
 type mapfileRule struct {
 	startRegExp *regexp.Regexp
 	endRegExp   *regexp.Regexp
+
+	embedRules []Rule
 }
 
 func (rule *mapfileRule) Apply(ctx context.Context, opts *RuleOptions, ns []Node) (_ []Node, err error) {
@@ -49,8 +69,18 @@ func (rule *mapfileRule) Apply(ctx context.Context, opts *RuleOptions, ns []Node
 
 		if !inMapfileRange {
 			group := startRegExp.FindStringSubmatch(txt)
-			if len(group) == 2 {
-				filePath := group[1]
+
+			var filePath string
+			for idx, name := range startRegExp.SubexpNames() {
+				switch name {
+				case "FilePath":
+					if idx < len(group) {
+						filePath = group[idx]
+					}
+				}
+			}
+
+			if filePath != "" {
 				realFilePath := opts.FilePath(filePath)
 				slog.DebugCtx(ctx, "find mapfile directive",
 					slog.String("filePath", filePath),
@@ -69,6 +99,19 @@ func (rule *mapfileRule) Apply(ctx context.Context, opts *RuleOptions, ns []Node
 					return nil, err
 				}
 				s := string(b)
+
+				if len(rule.embedRules) != 0 {
+					subProc, err := opts.Processor.WithRules(ctx, rule.embedRules)
+					if err != nil {
+						return nil, err
+					}
+
+					s, err = subProc.ProcessFile(ctx, realFilePath)
+					if err != nil {
+						return nil, err
+					}
+				}
+
 				if !strings.HasSuffix(s, "\n") {
 					s += "\n"
 				}

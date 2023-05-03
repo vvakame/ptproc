@@ -64,10 +64,13 @@ func Test_rangeImportRule_Apply(t *testing.T) {
 
 			ctx := context.Background()
 
-			rule := &rangeImportRule{
-				startRegExp: tt.startRegExp,
-				endRegExp:   tt.endRegExp,
-				targetName:  tt.rangeName,
+			rule, err := NewRangeImportRule(&RangeImportRuleConfig{
+				Name:        tt.rangeName,
+				StartRegExp: tt.startRegExp,
+				EndRegExp:   tt.endRegExp,
+			})
+			if err != nil {
+				t.Fatal(err)
 			}
 
 			proc, err := NewProcessor(&ProcessorConfig{

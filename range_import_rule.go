@@ -15,6 +15,24 @@ var _ Rule = (*rangeImportRule)(nil)
 var DefaultRangeImportStartRegEx = regexp.MustCompile(`range:(?P<RangeName>[^\s]+)`)
 var DefaultRangeImportEndRegEx = regexp.MustCompile(`range.end`)
 
+type RangeImportRuleConfig struct {
+	Name        string
+	StartRegExp *regexp.Regexp
+	EndRegExp   *regexp.Regexp
+}
+
+func NewRangeImportRule(cfg *RangeImportRuleConfig) (Rule, error) {
+	if cfg == nil {
+		cfg = &RangeImportRuleConfig{}
+	}
+
+	return &rangeImportRule{
+		targetName:  cfg.Name,
+		startRegExp: cfg.StartRegExp,
+		endRegExp:   cfg.EndRegExp,
+	}, nil
+}
+
 type rangeImportRule struct {
 	targetName  string
 	startRegExp *regexp.Regexp

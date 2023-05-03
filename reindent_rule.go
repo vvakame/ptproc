@@ -11,6 +11,20 @@ var _ Rule = (*reindentRule)(nil)
 
 const DefaultIndentLevel = 2
 
+type ReindentRuleConfig struct {
+	IndentLevel int
+}
+
+func NewReindentRule(cfg *ReindentRuleConfig) (Rule, error) {
+	if cfg == nil {
+		cfg = &ReindentRuleConfig{}
+	}
+
+	return &reindentRule{
+		indentLevel: cfg.IndentLevel,
+	}, nil
+}
+
 type reindentRule struct {
 	indentLevel int
 }

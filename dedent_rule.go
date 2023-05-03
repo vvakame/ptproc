@@ -12,6 +12,20 @@ var _ Rule = (*dedentRule)(nil)
 
 var DefaultDedentSpaceRegEx = regexp.MustCompile(`^(?P<Space>[\s]+)`)
 
+type DedentRuleConfig struct {
+	SpaceRegExp *regexp.Regexp
+}
+
+func NewDedentRule(cfg *DedentRuleConfig) (Rule, error) {
+	if cfg == nil {
+		cfg = &DedentRuleConfig{}
+	}
+
+	return &dedentRule{
+		spaceRegExp: cfg.SpaceRegExp,
+	}, nil
+}
+
 type dedentRule struct {
 	spaceRegExp *regexp.Regexp
 }

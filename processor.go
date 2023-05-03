@@ -40,10 +40,50 @@ func NewProcessor(cfg *ProcessorConfig) (Processor, error) {
 		}
 	}
 	if len(proc.rules) == 0 {
-		proc.rules = []Rule{
-			&mapfileRule{},
-			&maprangeRule{},
+		var rules []Rule
+		{
+			var embedRules []Rule
+			{
+				rule, err := NewReindentRule(nil)
+				if err != nil {
+					return nil, err
+				}
+				embedRules = append(embedRules, rule)
+			}
+			rule, err := NewMapfileRule(&MapfileRuleConfig{
+				EmbedRules: embedRules,
+			})
+			if err != nil {
+				return nil, err
+			}
+			rules = append(rules, rule)
 		}
+		{
+			var embedRules []Rule
+			{
+				rule, err := NewDedentRule(nil)
+				if err != nil {
+					return nil, err
+				}
+				embedRules = append(embedRules, rule)
+			}
+			{
+				rule, err := NewReindentRule(nil)
+				if err != nil {
+					return nil, err
+				}
+				embedRules = append(embedRules, rule)
+			}
+			rule, err := NewMaprangeRule(&MaprangeRuleConfig{
+				EmbedRules: embedRules,
+			})
+			if err != nil {
+				return nil, err
+			}
+			rules = append(rules, rule)
+		}
+
+		proc.rules = rules
 	}
 
 	return proc, nil

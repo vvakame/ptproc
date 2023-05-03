@@ -16,9 +16,29 @@ var _ Rule = (*maprangeRule)(nil)
 var DefaultMaprangeStartRegEx = regexp.MustCompile(`maprange:(?P<FilePath>[^\s,]+),(?P<RangeName>[^\s]+)`)
 var DefaultMaprangeEndRegEx = regexp.MustCompile(`maprange.end`)
 
+type MaprangeRuleConfig struct {
+	StartRegExp *regexp.Regexp
+	EndRegExp   *regexp.Regexp
+	EmbedRules  []Rule
+}
+
+func NewMaprangeRule(cfg *MaprangeRuleConfig) (Rule, error) {
+	if cfg == nil {
+		cfg = &MaprangeRuleConfig{}
+	}
+
+	return &maprangeRule{
+		startRegExp: cfg.StartRegExp,
+		endRegExp:   cfg.EndRegExp,
+		embedRules:  cfg.EmbedRules,
+	}, nil
+}
+
 type maprangeRule struct {
 	startRegExp *regexp.Regexp
 	endRegExp   *regexp.Regexp
+
+	embedRules []Rule
 }
 
 func (rule *maprangeRule) Apply(ctx context.Context, opts *RuleOptions, ns []Node) (_ []Node, err error) {
@@ -72,13 +92,16 @@ func (rule *maprangeRule) Apply(ctx context.Context, opts *RuleOptions, ns []Nod
 				}
 				s := string(b)
 
-				subProc, err := opts.Processor.WithRules(ctx, []Rule{
-					&rangeImportRule{
-						targetName: rangeName,
-					},
-					&dedentRule{},
-					&reindentRule{},
+				rangeImportRule, err := NewRangeImportRule(&RangeImportRuleConfig{
+					Name: rangeName,
 				})
+				if err != nil {
+					return nil, err
+				}
+
+				embedRules := append([]Rule{rangeImportRule}, rule.embedRules...)
+
+				subProc, err := opts.Processor.WithRules(ctx, embedRules)
 				if err != nil {
 					return nil, err
 				}

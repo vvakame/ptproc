@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 
 	"github.com/urfave/cli/v2"
 	"github.com/vvakame/ptproc"
@@ -56,6 +57,11 @@ func realMain() error {
 					return nil
 				},
 			},
+			&cli.StringFlag{
+				Name:    "config",
+				Usage:   "",
+				Aliases: []string{"c"},
+			},
 			&cli.BoolFlag{
 				Name:    "replace",
 				Usage:   "",
@@ -70,8 +76,122 @@ func realMain() error {
 		Action: func(cCtx *cli.Context) error {
 			ctx := cCtx.Context
 
+			configFilePath := cCtx.String("config")
+			configFileSpecified := true
+			if configFilePath == "" {
+				configFilePath = "ptproc.yaml"
+				configFileSpecified = false
+			}
 			useReplace := cCtx.Bool("replace")
 			globPattern := cCtx.String("glob")
+
+			var cfg *ptproc.ProcessorConfig
+			if rawCfg, err := ptproc.LoadConfig(ctx, configFilePath); !configFileSpecified && errors.Is(err, os.ErrNotExist) {
+				slog.DebugCtx(ctx, "ptproc.yaml is not exists. ignored")
+				cfg = nil
+			} else if errors.Is(err, os.ErrNotExist) {
+				return fmt.Errorf("failed to load config file: %s, : %w", configFilePath, err)
+			} else if err != nil {
+				return err
+			} else {
+				var rules []ptproc.Rule
+
+				slog.DebugCtx(ctx, "config file loaded", "config", rawCfg)
+
+				{
+					var mapfileStartRegExp *regexp.Regexp
+					if v := rawCfg.Mapfile.StartRegExp; v != "" {
+						mapfileStartRegExp, err = regexp.Compile(v)
+						if err != nil {
+							return fmt.Errorf("mapfile.startRegExp compile failed: %w", err)
+						}
+					}
+					var mapfileEndRegExp *regexp.Regexp
+					if v := rawCfg.Mapfile.EndRegExp; v != "" {
+						mapfileEndRegExp, err = regexp.Compile(v)
+						if err != nil {
+							return fmt.Errorf("mapfile.endRegExp compile failed: %w", err)
+						}
+					}
+
+					var embedRules []ptproc.Rule
+					if !rawCfg.DisableRewriteIndent {
+						rule, err := ptproc.NewReindentRule(&ptproc.ReindentRuleConfig{
+							IndentLevel: rawCfg.IndentWidth,
+						})
+						if err != nil {
+							return err
+						}
+
+						embedRules = append(embedRules, rule)
+					}
+
+					rule, err := ptproc.NewMapfileRule(&ptproc.MapfileRuleConfig{
+						StartRegExp: mapfileStartRegExp,
+						EndRegExp:   mapfileEndRegExp,
+						EmbedRules:  embedRules,
+					})
+					if err != nil {
+						return err
+					}
+
+					rules = append(rules, rule)
+				}
+
+				{
+					var maprangeStartRegExp *regexp.Regexp
+					if v := rawCfg.Maprange.StartRegExp; v != "" {
+						maprangeStartRegExp, err = regexp.Compile(v)
+						if err != nil {
+							return fmt.Errorf("maprange.startRegExp compile failed: %w", err)
+						}
+					}
+					var maprangeEndRegExp *regexp.Regexp
+					if v := rawCfg.Maprange.EndRegExp; v != "" {
+						maprangeEndRegExp, err = regexp.Compile(v)
+						if err != nil {
+							return fmt.Errorf("mapfile.endRegExp compile failed: %w", err)
+						}
+					}
+
+					var embedRules []ptproc.Rule
+					if !rawCfg.DisableRewriteIndent {
+						rule, err := ptproc.NewDedentRule(&ptproc.DedentRuleConfig{
+							SpaceRegExp: nil,
+						})
+						if err != nil {
+							return err
+						}
+
+						embedRules = append(embedRules, rule)
+					}
+					if !rawCfg.DisableRewriteIndent {
+						rule, err := ptproc.NewReindentRule(&ptproc.ReindentRuleConfig{
+							IndentLevel: rawCfg.IndentWidth,
+						})
+						if err != nil {
+							return err
+						}
+
+						embedRules = append(embedRules, rule)
+					}
+
+					rule, err := ptproc.NewMaprangeRule(&ptproc.MaprangeRuleConfig{
+						StartRegExp: maprangeStartRegExp,
+						EndRegExp:   maprangeEndRegExp,
+						EmbedRules:  embedRules,
+					})
+					if err != nil {
+						return err
+					}
+
+					rules = append(rules, rule)
+				}
+
+				cfg = &ptproc.ProcessorConfig{
+					Rules: rules,
+				}
+			}
 
 			slog.DebugCtx(ctx, "start processing", slog.Bool("replace", useReplace), slog.String("glob", globPattern))
 
@@ -96,7 +216,7 @@ func realMain() error {
 
 			slog.DebugCtx(ctx, "target files", "filePaths", filePaths)
 
-			proc, err := ptproc.NewProcessor(nil)
+			proc, err := ptproc.NewProcessor(cfg)
 			if err != nil {
 				return err
 			}

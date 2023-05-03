@@ -92,9 +92,12 @@ func Test_maprangeRule_Apply(t *testing.T) {
 
 			ctx := context.Background()
 
-			rule := &maprangeRule{
-				startRegExp: tt.startRegExp,
-				endRegExp:   tt.endRegExp,
+			rule, err := NewMaprangeRule(&MaprangeRuleConfig{
+				StartRegExp: tt.startRegExp,
+				EndRegExp:   tt.endRegExp,
+			})
+			if err != nil {
+				t.Fatal(err)
 			}
 
 			proc, err := NewProcessor(&ProcessorConfig{

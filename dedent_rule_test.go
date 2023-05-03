@@ -50,8 +50,11 @@ func Test_dedentRule_Apply(t *testing.T) {
 
 			ctx := context.Background()
 
-			rule := &dedentRule{
-				spaceRegExp: tt.spaceRegExp,
+			rule, err := NewDedentRule(&DedentRuleConfig{
+				SpaceRegExp: tt.spaceRegExp,
+			})
+			if err != nil {
+				t.Fatal(err)
 			}
 
 			proc, err := NewProcessor(&ProcessorConfig{
