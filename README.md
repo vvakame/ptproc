@@ -2,6 +2,12 @@
 
 [review-preproc](https://github.com/kmuto/review/blob/master/doc/preproc.md) [(JA)](https://github.com/kmuto/review/blob/master/doc/preproc.ja.md) like text processor.
 
+## Install
+
+```shell
+$ go install github.com/vvakame/ptproc/cmd/ptproc
+```
+
 ## `mapfile` directive
 
 `mapfile` directive embeds specified file.
@@ -58,5 +64,13 @@ Good night, world.
 ## examples
 
 ```shell
-$ ptproc --logLevel debug --config ./_misc/config/ptproc.yaml -g "./_misc/testdata/*/*/testcase/test.md"
+$ ptproc ./_misc/testdata/**/testcase/test.md
+```
+
+```shell
+$ docker run -v "$(pwd):/work" ghcr.io/vvakame/ptproc \
+    --logLevel debug \
+    --replace \
+    --config ./_misc/config/default/testcase/ptproc.yaml \
+    --glob "./_misc/testdata/*/*/testcase/test.md"
 ```

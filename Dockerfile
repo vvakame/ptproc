@@ -11,6 +11,8 @@ RUN CGO_ENABLED=0 go build -o bin/ptproc ./cmd/ptproc
 
 FROM alpine:latest
 
+WORKDIR /work
+
 RUN apk --no-cache add ca-certificates
 
 COPY --from=builder /project/bin/ptproc /bin/ptproc
