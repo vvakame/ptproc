@@ -2,6 +2,7 @@ package ptproc
 
 import (
 	"context"
+	"cuelang.org/go/cue/cuecontext"
 	"errors"
 	"io"
 	"regexp"
@@ -13,7 +14,7 @@ import (
 
 var _ Rule = (*mapfileRule)(nil)
 
-var DefaultMapfileStartRegEx = regexp.MustCompile(`mapfile:(?P<FilePath>[^\s]+)`)
+var DefaultMapfileStartRegEx = regexp.MustCompile(`mapfile:(?P<Cue>[^\s]+)`)
 var DefaultMapfileEndRegEx = regexp.MustCompile(`mapfile.end`)
 
 type MapfileRuleConfig struct {
@@ -39,6 +40,10 @@ type mapfileRule struct {
 	endRegExp   *regexp.Regexp
 
 	embedRules []Rule
+}
+
+type mapfileParams struct {
+	File string `cue:"file"`
 }
 
 func (rule *mapfileRule) Apply(ctx context.Context, opts *RuleOptions, ns []Node) (_ []Node, err error) {
@@ -70,58 +75,55 @@ func (rule *mapfileRule) Apply(ctx context.Context, opts *RuleOptions, ns []Node
 		if !inMapfileRange {
 			group := startRegExp.FindStringSubmatch(txt)
 
-			var filePath string
-			for idx, name := range startRegExp.SubexpNames() {
-				switch name {
-				case "FilePath":
-					if idx < len(group) {
-						filePath = group[idx]
-					}
-				}
+			if len(group) != 2 {
+				newNodes = append(newNodes, n)
+				continue
 			}
 
-			if filePath != "" {
-				realFilePath := opts.FilePath(filePath)
-				slog.DebugCtx(ctx, "find mapfile directive",
-					slog.String("filePath", filePath),
-					slog.String("realFilePath", realFilePath),
-				)
+			params, err := rule.textToParams(ctx, group[1])
+			if err != nil {
+				return nil, err
+			}
 
-				inMapfileRange = true
-				newNodes = append(newNodes, n)
+			filePath := params.File
+			realFilePath := opts.FilePath(filePath)
+			slog.DebugCtx(ctx, "find mapfile directive",
+				slog.String("filePath", filePath),
+				slog.String("realFilePath", realFilePath),
+			)
 
-				r, err := opts.OpenFile(realFilePath)
+			inMapfileRange = true
+			newNodes = append(newNodes, n)
+
+			r, err := opts.OpenFile(realFilePath)
+			if err != nil {
+				return nil, err
+			}
+			b, err := io.ReadAll(r)
+			if err != nil {
+				return nil, err
+			}
+			s := string(b)
+
+			if len(rule.embedRules) != 0 {
+				subProc, err := opts.Processor.WithRules(ctx, rule.embedRules)
 				if err != nil {
 					return nil, err
 				}
-				b, err := io.ReadAll(r)
+
+				s, err = subProc.ProcessFile(ctx, realFilePath)
 				if err != nil {
 					return nil, err
 				}
-				s := string(b)
-
-				if len(rule.embedRules) != 0 {
-					subProc, err := opts.Processor.WithRules(ctx, rule.embedRules)
-					if err != nil {
-						return nil, err
-					}
-
-					s, err = subProc.ProcessFile(ctx, realFilePath)
-					if err != nil {
-						return nil, err
-					}
-				}
-
-				if !strings.HasSuffix(s, "\n") {
-					s += "\n"
-				}
-
-				newNodes = append(newNodes, &node{
-					text: s,
-				})
-			} else {
-				newNodes = append(newNodes, n)
 			}
+
+			if !strings.HasSuffix(s, "\n") {
+				s += "\n"
+			}
+
+			newNodes = append(newNodes, &node{
+				text: s,
+			})
 		} else if endRegExp.MatchString(txt) {
 			inMapfileRange = false
 			newNodes = append(newNodes, n)
@@ -135,4 +137,31 @@ func (rule *mapfileRule) Apply(ctx context.Context, opts *RuleOptions, ns []Node
 	}
 
 	return newNodes, nil
+}
+
+func (rule *mapfileRule) textToParams(ctx context.Context, s string) (*mapfileParams, error) {
+	cuectx := cuecontext.New()
+
+	cv := cuectx.CompileString(s)
+
+	err := cv.Validate()
+	if err != nil {
+		slog.DebugCtx(ctx, "cue validate failed. evaluate to string", "err", err, "value", s)
+		return &mapfileParams{File: s}, nil
+	}
+
+	v, err := cv.String()
+	if err == nil {
+		return &mapfileParams{File: v}, nil
+	} else {
+		slog.DebugCtx(ctx, "cue value convert error. ignored", "err", err, "value", s)
+	}
+
+	params := &mapfileParams{}
+	err = cv.Decode(params)
+	if err != nil {
+		return nil, err
+	}
+
+	return params, nil
 }

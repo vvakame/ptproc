@@ -84,6 +84,52 @@ func Test_mapfileRule_Apply(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "cue string",
+			externalFile: func(t *testing.T, filePath string) string {
+				switch filePath {
+				case "external.txt":
+					return "external.txt content"
+				default:
+					t.Fatalf("unexpected external file: %s", filePath)
+					return ""
+				}
+			},
+			inputFileName: "test.txt",
+			input: heredoc.Doc(`
+				mapfile:"external.txt"
+				mapfile.end
+			`),
+			output: heredoc.Doc(`
+				mapfile:"external.txt"
+				external.txt content
+				mapfile.end
+			`),
+			wantErr: false,
+		},
+		{
+			name: "cue structure",
+			externalFile: func(t *testing.T, filePath string) string {
+				switch filePath {
+				case "external.txt":
+					return "external.txt content"
+				default:
+					t.Fatalf("unexpected external file: %s", filePath)
+					return ""
+				}
+			},
+			inputFileName: "test.txt",
+			input: heredoc.Doc(`
+				mapfile:file:"external.txt"
+				mapfile.end
+			`),
+			output: heredoc.Doc(`
+				mapfile:file:"external.txt"
+				external.txt content
+				mapfile.end
+			`),
+			wantErr: false,
+		},
+		{
 			name: "no end directive",
 			externalFile: func(t *testing.T, filePath string) string {
 				switch filePath {
