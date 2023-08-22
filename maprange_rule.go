@@ -5,12 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"regexp"
 	"strings"
 
 	"cuelang.org/go/cue/cuecontext"
 	"go.opentelemetry.io/otel"
-	"golang.org/x/exp/slog"
 )
 
 var _ Rule = (*maprangeRule)(nil)
@@ -70,7 +70,7 @@ func (rule *maprangeRule) Apply(ctx context.Context, opts *RuleOptions, ns []Nod
 		endRegExp = DefaultMaprangeEndRegEx
 	}
 
-	slog.DebugCtx(ctx, "start maprange rule processing")
+	slog.DebugContext(ctx, "start maprange rule processing")
 
 	newNodes := make([]Node, 0, len(ns))
 
@@ -104,7 +104,7 @@ func (rule *maprangeRule) Apply(ctx context.Context, opts *RuleOptions, ns []Nod
 				skip = *params.Skip
 			}
 			skipped = 0
-			slog.DebugCtx(ctx, "find maprange directive",
+			slog.DebugContext(ctx, "find maprange directive",
 				slog.String("filePath", filePath),
 				slog.String("realFilePath", realFilePath),
 				slog.String("rangeName", rangeName),
@@ -191,7 +191,7 @@ func (rule *maprangeRule) textToParams(ctx context.Context, s string) (*maprange
 
 	err := cv.Validate()
 	if err != nil {
-		slog.DebugCtx(ctx, "cue validate failed. evaluate to string", "err", err, "value", s)
+		slog.DebugContext(ctx, "cue validate failed. evaluate to string", "err", err, "value", s)
 		ss := strings.SplitN(s, ",", 2)
 		if len(ss) != 2 {
 			return nil, fmt.Errorf("unexpected maprange syntax: %s", s)
@@ -215,7 +215,7 @@ func (rule *maprangeRule) textToParams(ctx context.Context, s string) (*maprange
 			Name: ss[1],
 		}, nil
 	} else {
-		slog.DebugCtx(ctx, "failed to convert cue value to string. continue processing", "err", err, "value", s)
+		slog.DebugContext(ctx, "failed to convert cue value to string. continue processing", "err", err, "value", s)
 	}
 
 	params := &maprangeParams{}

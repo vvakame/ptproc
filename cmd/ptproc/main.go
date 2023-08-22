@@ -5,12 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 
 	"github.com/urfave/cli/v2"
 	"github.com/vvakame/ptproc"
-	"golang.org/x/exp/slog"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -51,7 +51,7 @@ func realMain() error {
 					}
 
 					setDefaultLoggerWithLevel(leveler)
-					slog.DebugCtx(ctx, "set default log level", slog.String("logLevel", logLevel))
+					slog.DebugContext(ctx, "set default log level", slog.String("logLevel", logLevel))
 
 					return nil
 				},
@@ -87,7 +87,7 @@ func realMain() error {
 
 			var cfg *ptproc.ProcessorConfig
 			if rawCfg, err := ptproc.LoadConfig(ctx, configFilePath); !configFileSpecified && errors.Is(err, os.ErrNotExist) {
-				slog.DebugCtx(ctx, "ptproc.yaml is not exists. ignored")
+				slog.DebugContext(ctx, "ptproc.yaml is not exists. ignored")
 				cfg = nil
 			} else if errors.Is(err, os.ErrNotExist) {
 				return fmt.Errorf("failed to load config file: %s, : %w", configFilePath, err)
@@ -100,7 +100,7 @@ func realMain() error {
 				}
 			}
 
-			slog.DebugCtx(ctx, "start processing", slog.Bool("replace", useReplace), slog.String("glob", globPattern))
+			slog.DebugContext(ctx, "start processing", slog.Bool("replace", useReplace), slog.String("glob", globPattern))
 
 			var filePaths []string
 
@@ -121,7 +121,7 @@ func realMain() error {
 				return errors.New("no files specified")
 			}
 
-			slog.DebugCtx(ctx, "target files", "filePaths", filePaths)
+			slog.DebugContext(ctx, "target files", "filePaths", filePaths)
 
 			proc, err := ptproc.NewProcessor(cfg)
 			if err != nil {
@@ -135,7 +135,7 @@ func realMain() error {
 
 				if useReplace {
 					eg.Go(func() error {
-						slog.DebugCtx(ctx, "replace file", slog.String("file", s))
+						slog.DebugContext(ctx, "replace file", slog.String("file", s))
 
 						result, err := proc.ProcessFile(ctx, s)
 						if err != nil {
@@ -147,7 +147,7 @@ func realMain() error {
 							return err
 						}
 
-						slog.InfoCtx(ctx, "file has been replaced", slog.String("file", s))
+						slog.InfoContext(ctx, "file has been replaced", slog.String("file", s))
 
 						return nil
 					})
@@ -179,9 +179,9 @@ func realMain() error {
 }
 
 func setDefaultLoggerWithLevel(level slog.Leveler) {
-	h := slog.HandlerOptions{
+	h := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
 		Level: level,
-	}.NewTextHandler(os.Stderr)
+	})
 	logger := slog.New(h)
 	slog.SetDefault(logger)
 }
