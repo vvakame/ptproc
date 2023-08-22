@@ -13,3 +13,29 @@ updates:
     labels:
       - "dependencies"
       - "dependabot"
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "saturday"
+      time: "10:00"
+      timezone: "Asia/Tokyo"
+    commit-message:
+      prefix: "change"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "dependabot"
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "saturday"
+      time: "10:00"
+      timezone: "Asia/Tokyo"
+    commit-message:
+      prefix: "change"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "dependabot"
