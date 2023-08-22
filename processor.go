@@ -6,11 +6,11 @@ import (
 	"context"
 	"errors"
 	"io"
+	"log/slog"
 	"os"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"golang.org/x/exp/slog"
 )
 
 type Processor interface {
@@ -105,7 +105,7 @@ func (proc *processor) close() *processor {
 }
 
 func (proc *processor) ProcessFile(ctx context.Context, filePath string) (string, error) {
-	slog.DebugCtx(ctx, "process file", slog.String("filePath", filePath))
+	slog.DebugContext(ctx, "process file", slog.String("filePath", filePath))
 
 	ns, err := proc.parseFile(ctx, filePath)
 	if err != nil {
@@ -144,7 +144,7 @@ func (proc *processor) parseFile(ctx context.Context, filePath string) (_ []Node
 		defer func() {
 			err := rc.Close()
 			if err != nil {
-				slog.ErrorCtx(ctx, "file close")
+				slog.ErrorContext(ctx, "file close")
 			}
 		}()
 	}

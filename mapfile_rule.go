@@ -2,14 +2,14 @@ package ptproc
 
 import (
 	"context"
-	"cuelang.org/go/cue/cuecontext"
 	"errors"
 	"io"
+	"log/slog"
 	"regexp"
 	"strings"
 
+	"cuelang.org/go/cue/cuecontext"
 	"go.opentelemetry.io/otel"
-	"golang.org/x/exp/slog"
 )
 
 var _ Rule = (*mapfileRule)(nil)
@@ -68,7 +68,7 @@ func (rule *mapfileRule) Apply(ctx context.Context, opts *RuleOptions, ns []Node
 		endRegExp = DefaultMapfileEndRegEx
 	}
 
-	slog.DebugCtx(ctx, "start mapfile rule processing")
+	slog.DebugContext(ctx, "start mapfile rule processing")
 
 	newNodes := make([]Node, 0, len(ns))
 
@@ -100,7 +100,7 @@ func (rule *mapfileRule) Apply(ctx context.Context, opts *RuleOptions, ns []Node
 				skip = *params.Skip
 			}
 			skipped = 0
-			slog.DebugCtx(ctx, "find mapfile directive",
+			slog.DebugContext(ctx, "find mapfile directive",
 				slog.String("filePath", filePath),
 				slog.String("realFilePath", realFilePath),
 				slog.Int("skip", skip),
@@ -179,7 +179,7 @@ func (rule *mapfileRule) textToParams(ctx context.Context, s string) (*mapfilePa
 
 	err := cv.Validate()
 	if err != nil {
-		slog.DebugCtx(ctx, "cue validate failed. evaluate to string", "err", err, "value", s)
+		slog.DebugContext(ctx, "cue validate failed. evaluate to string", "err", err, "value", s)
 		return &mapfileParams{File: s}, nil
 	}
 
@@ -187,7 +187,7 @@ func (rule *mapfileRule) textToParams(ctx context.Context, s string) (*mapfilePa
 	if err == nil {
 		return &mapfileParams{File: v}, nil
 	} else {
-		slog.DebugCtx(ctx, "failed to convert cue value to string. continue processing", "err", err, "value", s)
+		slog.DebugContext(ctx, "failed to convert cue value to string. continue processing", "err", err, "value", s)
 	}
 
 	params := &mapfileParams{}

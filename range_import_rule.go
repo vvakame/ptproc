@@ -3,12 +3,12 @@ package ptproc
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"regexp"
 
 	"cuelang.org/go/cue/cuecontext"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"golang.org/x/exp/slog"
 )
 
 var _ Rule = (*rangeImportRule)(nil)
@@ -64,7 +64,7 @@ func (rule *rangeImportRule) Apply(ctx context.Context, opts *RuleOptions, ns []
 		endRegExp = DefaultRangeImportEndRegEx
 	}
 
-	slog.DebugCtx(ctx, "start range import rule processing")
+	slog.DebugContext(ctx, "start range import rule processing")
 
 	newNodes := make([]Node, 0, len(ns))
 
@@ -82,7 +82,7 @@ func (rule *rangeImportRule) Apply(ctx context.Context, opts *RuleOptions, ns []
 				}
 
 				name := params.Name
-				slog.DebugCtx(ctx, "find range directive", slog.String("name", name))
+				slog.DebugContext(ctx, "find range directive", slog.String("name", name))
 
 				if name != rule.targetName {
 					continue
@@ -111,7 +111,7 @@ func (rule *rangeImportRule) textToParams(ctx context.Context, s string) (*range
 
 	err := cv.Validate()
 	if err != nil {
-		slog.DebugCtx(ctx, "cue validate failed. evaluate to string", "err", err, "value", s)
+		slog.DebugContext(ctx, "cue validate failed. evaluate to string", "err", err, "value", s)
 		return &rangeImportParams{Name: s}, nil
 	}
 
@@ -119,7 +119,7 @@ func (rule *rangeImportRule) textToParams(ctx context.Context, s string) (*range
 	if err == nil {
 		return &rangeImportParams{Name: v}, nil
 	} else {
-		slog.DebugCtx(ctx, "failed to convert cue value to string. continue processing", "err", err, "value", s)
+		slog.DebugContext(ctx, "failed to convert cue value to string. continue processing", "err", err, "value", s)
 	}
 
 	params := &rangeImportParams{}

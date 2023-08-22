@@ -3,12 +3,12 @@ package ptproc
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"regexp"
 
 	"github.com/goccy/go-yaml"
 	"go.opentelemetry.io/otel"
-	"golang.org/x/exp/slog"
 )
 
 var _ slog.LogValuer = (*Config)(nil)
@@ -62,7 +62,7 @@ func LoadConfig(ctx context.Context, filePath string) (_ *Config, err error) {
 		return nil, err
 	}
 
-	slog.DebugCtx(ctx, "config file loaded", "config", cfg)
+	slog.DebugContext(ctx, "config file loaded", "config", cfg)
 
 	return cfg, nil
 }
