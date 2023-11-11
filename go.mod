@@ -9,7 +9,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.0
 	github.com/urfave/cli/v2 v2.25.7
 	go.opentelemetry.io/otel v1.19.0
-	golang.org/x/sync v0.4.0
+	golang.org/x/sync v0.5.0
 )
 
 require (
