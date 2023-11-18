@@ -8,7 +8,7 @@ require (
 	github.com/goccy/go-yaml v1.11.2
 	github.com/pmezard/go-difflib v1.0.0
 	github.com/urfave/cli/v2 v2.25.7
-	go.opentelemetry.io/otel v1.20.0
+	go.opentelemetry.io/otel v1.21.0
 	golang.org/x/sync v0.5.0
 )
 
@@ -24,8 +24,8 @@ require (
 	github.com/mpvl/unique v0.0.0-20150818121801-cbe035fff7de // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
-	go.opentelemetry.io/otel/metric v1.20.0 // indirect
-	go.opentelemetry.io/otel/trace v1.20.0 // indirect
+	go.opentelemetry.io/otel/metric v1.21.0 // indirect
+	go.opentelemetry.io/otel/trace v1.21.0 // indirect
 	golang.org/x/net v0.8.0 // indirect
 	golang.org/x/sys v0.6.0 // indirect
 	golang.org/x/text v0.8.0 // indirect
