@@ -7,7 +7,7 @@ require (
 	github.com/MakeNowJust/heredoc/v2 v2.0.1
 	github.com/goccy/go-yaml v1.11.2
 	github.com/pmezard/go-difflib v1.0.0
-	github.com/urfave/cli/v2 v2.25.7
+	github.com/urfave/cli/v2 v2.26.0
 	go.opentelemetry.io/otel v1.21.0
 	golang.org/x/sync v0.5.0
 )
