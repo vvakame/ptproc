@@ -5,7 +5,7 @@ go 1.21
 require (
 	cuelang.org/go v0.7.0
 	github.com/MakeNowJust/heredoc/v2 v2.0.1
-	github.com/goccy/go-yaml v1.11.2
+	github.com/goccy/go-yaml v1.11.3
 	github.com/pmezard/go-difflib v1.0.0
 	github.com/urfave/cli/v2 v2.27.1
 	go.opentelemetry.io/otel v1.22.0
