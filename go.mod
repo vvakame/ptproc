@@ -1,9 +1,10 @@
 module github.com/vvakame/ptproc
 
 go 1.21
+toolchain go1.22.5
 
 require (
-	cuelang.org/go v0.9.2
+	cuelang.org/go v0.10.1
 	github.com/MakeNowJust/heredoc/v2 v2.0.1
 	github.com/goccy/go-yaml v1.13.6
 	github.com/pmezard/go-difflib v1.0.0
@@ -25,6 +26,7 @@ require (
 	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
 	go.opentelemetry.io/otel/metric v1.29.0 // indirect
 	go.opentelemetry.io/otel/trace v1.29.0 // indirect
+	golang.org/x/mod v0.20.0 // indirect
 	golang.org/x/net v0.30.0 // indirect
 	golang.org/x/sys v0.26.0 // indirect
 	golang.org/x/text v0.19.0 // indirect
