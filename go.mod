@@ -1,9 +1,10 @@
 module github.com/vvakame/ptproc
 
 go 1.21
+toolchain go1.24.1
 
 require (
-	cuelang.org/go v0.9.2
+	cuelang.org/go v0.12.1
 	github.com/MakeNowJust/heredoc/v2 v2.0.1
 	github.com/goccy/go-yaml v1.13.6
 	github.com/pmezard/go-difflib v1.0.0
@@ -21,12 +22,14 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
+	github.com/pelletier/go-toml/v2 v2.2.3 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
 	go.opentelemetry.io/otel/metric v1.29.0 // indirect
 	go.opentelemetry.io/otel/trace v1.29.0 // indirect
-	golang.org/x/net v0.30.0 // indirect
-	golang.org/x/sys v0.26.0 // indirect
-	golang.org/x/text v0.19.0 // indirect
+	golang.org/x/mod v0.22.0 // indirect
+	golang.org/x/net v0.34.0 // indirect
+	golang.org/x/sys v0.29.0 // indirect
+	golang.org/x/text v0.21.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
