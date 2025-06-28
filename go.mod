@@ -3,7 +3,7 @@ module github.com/vvakame/ptproc
 go 1.23.0
 
 require (
-	cuelang.org/go v0.13.1
+	cuelang.org/go v0.13.2
 	github.com/MakeNowJust/heredoc/v2 v2.0.1
 	github.com/goccy/go-yaml v1.13.6
 	github.com/pmezard/go-difflib v1.0.0
