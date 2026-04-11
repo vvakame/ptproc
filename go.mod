@@ -3,7 +3,7 @@ module github.com/vvakame/ptproc
 go 1.25.0
 
 require (
-	cuelang.org/go v0.16.0
+	cuelang.org/go v0.16.1
 	github.com/MakeNowJust/heredoc/v2 v2.0.1
 	github.com/goccy/go-yaml v1.13.6
 	github.com/pmezard/go-difflib v1.0.0
@@ -32,8 +32,8 @@ require (
 	go.opentelemetry.io/otel/metric v1.43.0 // indirect
 	go.opentelemetry.io/otel/trace v1.43.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	golang.org/x/net v0.50.0 // indirect
-	golang.org/x/sys v0.41.0 // indirect
-	golang.org/x/text v0.34.0 // indirect
+	golang.org/x/net v0.52.0 // indirect
+	golang.org/x/sys v0.42.0 // indirect
+	golang.org/x/text v0.35.0 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
 )
