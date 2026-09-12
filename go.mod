@@ -1,6 +1,6 @@
 module github.com/vvakame/ptproc
 
-go 1.25.0
+go 1.26.0
 
 require (
 	cuelang.org/go v0.17.1
@@ -9,7 +9,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.0
 	github.com/urfave/cli/v2 v2.27.7
 	go.opentelemetry.io/otel v1.46.0
-	golang.org/x/sync v0.22.0
+	golang.org/x/sync v0.23.0
 )
 
 require (
